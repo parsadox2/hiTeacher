@@ -111,33 +111,42 @@ app.get('/logout' , (req , res) =>{
         return res.status(409).json({message : "you are not logged in"}).end()
     }
 })
-app.put('/editUsername' , async(req , res) =>{
+app.put('/editUserInfo' , async(req , res) =>{
+    if(!req.session.user)
+    {
+        return res.status(409).json({message : "you are not logged in"}).end()
+    }
     const username = req.body.name
     const password = req.body.password
     const email = req.body.email
-    const checkUsername = await user.find({username : username})
+    const checkUsername = await user.findOne({username : username})
     if(username.includes('<script>') || email.includes('<script>'))
     {
         return res.status(406).json({"message" :"not acceptable"}).end()
     }
-    if(!checkUsername.length)
+    if(checkUsername.length)
     {
-        const passwordHash = bcrypt.hashSync(password , 10)
-        const lastUser = await user.find().sort('-_id').limit(1)
-        const newUser = new user({
-            _id : ai.setAi(lastUser) ,
-            username : username ,
-            password : passwordHash ,
-            email : email ,
-            phonenumber : {type : String , require : true} , 
-            type : 0
-        })
-        newUser.save()
-        return res.status(201).json({"message" : "user successfuly created"}).end()
+        if(bcrypt.compareSync(password , checkUsername.password))
+        {
+            if(username == '')
+            {
+                username = checkUsername.username
+            }
+            if(email == '')
+            {
+                email = checkUsername.email
+            }
+            await user.updateOne({username : username , email : email})
+            return res.status(202)
+        }
+        else
+        {
+            return res.status(400).json({"message" : "your password is not correct"})
+        }
     }
     else
     {
-        return res.status(406).json({"message" :"this username is used by another user"}).end()
+        return res.status(406).json({"message" :"user not found"}).end()
     }
 })
 app.delete('/deleteaccount/:password' , async(req , res) =>{
