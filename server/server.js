@@ -18,7 +18,7 @@ let userSchema = new mongoose.Schema({
     password : String , 
     email : String ,
     type: Number ,
-}, { versionKey : false});
+}, { versionKey : false , validateBeforeSave: true});
 
 let user = mongoose.model("User" , userSchema);
 
@@ -33,11 +33,17 @@ app.get('/', (req, res) => {
     return res.json({ "message": "home page" }).end();
 });
 
+
+
 app.post('/register' , async(req , res) =>{
-    const username = xss(req.body.name)
-    const password = xss(req.body.password)
-    const email = xss(req.body.email)
+    const username = req.body.name
+    const password = req.body.password
+    const email = req.body.email
     const checkUsername = await user.find({username : username})
+    if(username.includes('<script>') || email.includes('<script>'))
+    {
+        return res.status(406).json({"message" :"not acceptable"}).end()
+    }
     if(!checkUsername.length)
     {
         const passwordHash = bcrypt.hashSync(password , 10)
@@ -92,7 +98,6 @@ app.post('/beTeacher' , (req , res)=>{
     {
         return res.status(409).json({message : "you are not logged in"}).end()
     }
-    
 })
 
 app.get('/logout' , (req , res) =>{
@@ -106,7 +111,35 @@ app.get('/logout' , (req , res) =>{
         return res.status(409).json({message : "you are not logged in"}).end()
     }
 })
-
+app.put('/editUsername' , async(req , res) =>{
+    const username = req.body.name
+    const password = req.body.password
+    const email = req.body.email
+    const checkUsername = await user.find({username : username})
+    if(username.includes('<script>') || email.includes('<script>'))
+    {
+        return res.status(406).json({"message" :"not acceptable"}).end()
+    }
+    if(!checkUsername.length)
+    {
+        const passwordHash = bcrypt.hashSync(password , 10)
+        const lastUser = await user.find().sort('-_id').limit(1)
+        const newUser = new user({
+            _id : ai.setAi(lastUser) ,
+            username : username ,
+            password : passwordHash ,
+            email : email ,
+            phonenumber : {type : String , require : true} , 
+            type : 0
+        })
+        newUser.save()
+        return res.status(201).json({"message" : "user successfuly created"}).end()
+    }
+    else
+    {
+        return res.status(406).json({"message" :"this username is used by another user"}).end()
+    }
+})
 app.delete('/deleteaccount/:password' , async(req , res) =>{
     const password = req.body.password
     if(!req.session.user)
