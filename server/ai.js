@@ -7,5 +7,4 @@ function setAi(obj)
     }
     return count
 }
-
-module.exports = {setAi}
+export {setAi}
