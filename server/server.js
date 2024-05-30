@@ -28,7 +28,8 @@ let category = mongoose.model("Category" , categorySchema)
 
 app.use(helmet.xssFilter())
 app.use(bodyParser.json())
-app.use(expressSession({secret : "hfeliushuebvr8bae8yvli7yayybegvku7kaygvfyvyeasuvevgbgvfy" , 
+app.use(expressSession({
+    secret : "hfeliushuebvr8bae8yvli7yayybegvku7kaygvfyvyeasuvevgbgvfy" , 
     resave : true , 
     saveUninitialized : true
 }))
@@ -36,9 +37,6 @@ app.use(expressSession({secret : "hfeliushuebvr8bae8yvli7yayybegvku7kaygvfyvyeas
 app.get('/', (req, res) => {
     return res.json({ "message": "home page" }).end();
 });
-
-
-
 app.post('/register' , async(req , res) =>{
     const username = req.body.username
     const password = req.body.password
@@ -68,7 +66,6 @@ app.post('/register' , async(req , res) =>{
         return res.status(406).json({"message" :"this username is used by another user"}).end()
     }
 })
-
 app.post('/login' , async(req , res)=>{
     if(req.session.user)
     {
@@ -96,8 +93,6 @@ app.post('/login' , async(req , res)=>{
         return res.status(406).json({"message" :"this username is not used by any user"}).end()
     }
 })
-
-
 app.get('/logout' , (req , res) =>{
     if(req.session.user)
     {
@@ -172,7 +167,6 @@ app.delete('/deleteaccount/:password' , async(req , res) =>{
         }
     }
 })
-
 app.post('/newcategory' , async(req , res) =>{
     if(!req.session.user.type)
     {
