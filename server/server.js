@@ -1,4 +1,4 @@
-import express from 'express'
+import express, { request } from 'express'
 import mongoose from 'mongoose';
 import bodyParser from 'body-parser';
 import expressSession from 'express-session'
@@ -23,8 +23,15 @@ let categorySchema = new mongoose.Schema({
     name : String ,
 })
 
+let requestSchema = new mongoose.Schema({
+    _id : Number ,
+    user : Number,
+    category : Number ,
+})
+
 let user = mongoose.model("User" , userSchema);
 let category = mongoose.model("Category" , categorySchema)
+let request = mongoose.model("Request" , requestSchema)
 
 app.use(helmet.xssFilter())
 app.use(bodyParser.json())
@@ -186,7 +193,44 @@ app.post('/newcategory' , async(req , res) =>{
     newCategorey.save()
     return res.status(201).json({message : "the category is created"}).end()
 })
-
+app.post('/request' , async(req , res) =>{
+    if(!req.session.user)
+    {
+        return res.status(409).json({message : "you re not logged in"}).end()
+    }
+    let userType = await user.findOne({username : req.session.user.username})
+    if(userType)
+    {
+        if(userType.type == 1)
+        {
+            const {text , categoryId} = req.body
+            const userCategory = category.findOne({_id : categoryId})
+            const lastRequest = request.find().sort('-_id').limit(1)
+            if(userCategory)
+            {
+                let newRequest = new request({
+                    _id : setAi(lastRequest) , 
+                    text : text,
+                    user : userType._id , 
+                    category : categoryId
+                })
+            }
+            else
+            {
+                return res.status(409).json({message : "the category is not found"}).end()
+            }
+        }
+        else
+        {
+            return res.status(409).json({message : "you are not admin"}).end()
+        }
+    }
+    else
+    {
+        req.session.user = null
+        return res.status(409).json({message : "your account has been deleted"}).end()
+    }
+})
 
 
 
