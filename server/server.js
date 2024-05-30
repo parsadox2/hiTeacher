@@ -5,8 +5,8 @@ import expressSession from 'express-session'
 import bcrypt from 'bcrypt'
 import helmet from 'helmet';
 import { setAi } from './ai.js';
-const app = express();
 
+const app = express();
 
 mongoose.connect('mongodb://localhost:27017/hiteacher')
 
@@ -22,8 +22,6 @@ let categorySchema = new mongoose.Schema({
     _id : Number , 
     name : String ,
 })
-
-
 
 let user = mongoose.model("User" , userSchema);
 let category = mongoose.model("Category" , categorySchema)
@@ -175,13 +173,17 @@ app.delete('/deleteaccount/:password' , async(req , res) =>{
     }
 })
 
-app.post('/newcategory' , (req , res) =>{
+app.post('/newcategory' , async(req , res) =>{
     if(!req.session.user.type)
     {
         return res.status(409).json({message : "you are not logged in"}).end()
     }
     const {name} = req.body
-    let newCategorey = new category({name : name})
+    const lastCategory = await category.find().sort('-_id').limit(1)
+    let newCategorey = new category({
+        _id : setAi(lastCategory),
+        name : name
+    })
     return res.status(201).json({message : "the category is created"}).end()
 })
 
