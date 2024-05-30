@@ -1,12 +1,10 @@
-const express = require('express');
-const mongoose = require('mongoose');
-const fs = require('fs');
-const bodyParser = require('body-parser');
-const expressSession = require('express-session');
-const bcrypt = require('bcrypt')
-const helmet = require('helmet')
-const xss = require('xss')
-const ai = require('./ai')
+import express from 'express'
+import mongoose from 'mongoose';
+import bodyParser from 'body-parser';
+import expressSession from 'express-session'
+import bcrypt from 'bcrypt'
+import helmet from 'helmet';
+import { setAi } from './ai.js';
 const app = express();
 
 
@@ -20,7 +18,15 @@ let userSchema = new mongoose.Schema({
     type: Number ,
 }, { versionKey : false , validateBeforeSave: true});
 
+let categorySchema = new mongoose.Schema({
+    _id : Number , 
+    name : String ,
+})
+
+
+
 let user = mongoose.model("User" , userSchema);
+let category = mongoose.model("Category" , categorySchema)
 
 app.use(helmet.xssFilter())
 app.use(bodyParser.json())
@@ -36,7 +42,7 @@ app.get('/', (req, res) => {
 
 
 app.post('/register' , async(req , res) =>{
-    const username = req.body.name
+    const username = req.body.username
     const password = req.body.password
     const email = req.body.email
     const checkUsername = await user.find({username : username})
@@ -49,7 +55,7 @@ app.post('/register' , async(req , res) =>{
         const passwordHash = bcrypt.hashSync(password , 10)
         const lastUser = await user.find().sort('-_id').limit(1)
         const newUser = new user({
-            _id : ai.setAi(lastUser) ,
+            _id : setAi(lastUser) ,
             username : username ,
             password : passwordHash ,
             email : email ,
@@ -93,12 +99,6 @@ app.post('/login' , async(req , res)=>{
     }
 })
 
-app.post('/beTeacher' , (req , res)=>{
-    if(!req.session.user)
-    {
-        return res.status(409).json({message : "you are not logged in"}).end()
-    }
-})
 
 app.get('/logout' , (req , res) =>{
     if(req.session.user)
@@ -116,15 +116,15 @@ app.put('/editUserInfo' , async(req , res) =>{
     {
         return res.status(409).json({message : "you are not logged in"}).end()
     }
-    const username = req.body.name
+    let username = req.body.username
     const password = req.body.password
-    const email = req.body.email
-    const checkUsername = await user.findOne({username : username})
+    let email = req.body.email
+    const checkUsername = await user.findOne({username : req.session.user.username})
     if(username.includes('<script>') || email.includes('<script>'))
     {
         return res.status(406).json({"message" :"not acceptable"}).end()
     }
-    if(checkUsername.length)
+    if(checkUsername)
     {
         if(bcrypt.compareSync(password , checkUsername.password))
         {
@@ -136,8 +136,10 @@ app.put('/editUserInfo' , async(req , res) =>{
             {
                 email = checkUsername.email
             }
-            await user.updateOne({username : username , email : email})
-            return res.status(202)
+            await user.updateOne({username : username , email : email}).then(()=>{
+                res.status(202).json({message : 'edited'})
+            })
+            
         }
         else
         {
@@ -172,5 +174,18 @@ app.delete('/deleteaccount/:password' , async(req , res) =>{
         }
     }
 })
+
+app.post('/newcategory' , (req , res) =>{
+    if(!req.session.user.type)
+    {
+        return res.status(409).json({message : "you are not logged in"}).end()
+    }
+    const {name} = req.body
+    let newCategorey = new category({name : name})
+    return res.status(201).json({message : "the category is created"}).end()
+})
+
+
+
 
 app.listen(3000);
