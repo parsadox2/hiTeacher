@@ -168,7 +168,12 @@ app.delete('/deleteaccount/:password' , async(req , res) =>{
     }
 })
 app.post('/newcategory' , async(req , res) =>{
-    if(!req.session.user.type)
+    if(!req.session.user)
+    {
+        return res.status(409).json({message : "you are not logged in"}).end()
+    }
+    let userType = await user.findOne({username : req.session.user.username})
+    if(!userType.type)
     {
         return res.status(409).json({message : "you are not logged in"}).end()
     }
@@ -178,6 +183,7 @@ app.post('/newcategory' , async(req , res) =>{
         _id : setAi(lastCategory),
         name : name
     })
+    newCategorey.save()
     return res.status(201).json({message : "the category is created"}).end()
 })
 
